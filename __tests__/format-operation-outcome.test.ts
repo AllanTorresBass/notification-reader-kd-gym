@@ -4,6 +4,8 @@ import {
   formatCaptureBatchOutcome,
   formatConfirmPaymentOutcome,
   formatCaptureNotificationOutcome,
+  formatCreateInvoiceOutcome,
+  formatEntitySyncError,
   formatManualRegisterOutcome,
   formatPullSyncOutcome,
   formatQueueRetryOutcome,
@@ -18,6 +20,8 @@ const baseEntry: PaymentRegisterCacheEntry = {
   invoiceStatus: null,
   syncStatus: 'pending_sync',
   lastSyncError: null,
+  assignedClientId: null,
+  assignedClientName: null,
   name: null,
   pago: '15000.00',
   mobile: '0412-1222392',
@@ -153,6 +157,7 @@ describe('formatPullSyncOutcome', () => {
       durationMs: 100,
       errorCode: 'network',
       errorMessage: 'Sin conexión',
+      syncRunId: 'run-1',
     });
     expect(outcome.status).toBe('failed');
     expect(outcome.title).toBe(copy.feedback.sync.failedTitle);
@@ -169,6 +174,7 @@ describe('formatPullSyncOutcome', () => {
       durationMs: 0,
       errorCode: null,
       errorMessage: null,
+      syncRunId: 'run-1',
     });
     expect(outcome.status).toBe('skipped');
     expect(outcome.title).toBe(copy.feedback.sync.inFlightTitle);
@@ -185,6 +191,7 @@ describe('formatPullSyncOutcome', () => {
       durationMs: 500,
       errorCode: null,
       errorMessage: null,
+      syncRunId: 'run-1',
     });
     expect(outcome.status).toBe('completed');
     expect(outcome.message).toContain('2 pagos nuevos importados');
@@ -231,5 +238,23 @@ describe('formatQueueRetryOutcome', () => {
     const outcome = formatQueueRetryOutcome({ processed: 3, failed: 0, pendingJobs: 0 });
     expect(outcome.status).toBe('completed');
     expect(outcome.title).toBe(copy.feedback.queue.completedTitle);
+  });
+});
+
+describe('formatCreateInvoiceOutcome', () => {
+  it('returns success copy with invoice number', () => {
+    const outcome = formatCreateInvoiceOutcome({ id: 'inv-1', invoiceNumber: 'FAC-001' });
+    expect(outcome.status).toBe('completed');
+    expect(outcome.title).toBe(copy.facturas.successTitle);
+    expect(outcome.message).toContain('FAC-001');
+  });
+});
+
+describe('formatEntitySyncError', () => {
+  it('wraps entity sync message with standard title', () => {
+    const outcome = formatEntitySyncError('Sesión inválida.');
+    expect(outcome.status).toBe('failed');
+    expect(outcome.title).toBe(copy.feedback.entitySync.title);
+    expect(outcome.message).toBe('Sesión inválida.');
   });
 });

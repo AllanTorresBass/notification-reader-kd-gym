@@ -3,7 +3,7 @@ import { AppState } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { formatBackgroundSyncOutcome } from '@/lib/feedback/format-operation-outcome';
-import { reportOutcome } from '@/lib/feedback/report-feedback';
+import { reportError, reportOutcome } from '@/lib/feedback/report-feedback';
 import { queryKeys } from '@/lib/query-keys';
 import { activityLogSyncService } from '@/lib/services/feedback/ActivityLogSyncService';
 import { paymentSyncOrchestrator } from '@/lib/services/payments/PaymentSyncOrchestrator';
@@ -14,16 +14,40 @@ export function usePaymentSyncHost() {
 
   useEffect(() => {
     const sync = async (reason: 'startup' | 'app_active') => {
-      const result = await paymentSyncOrchestrator.runSync(reason);
-      const outcome = formatBackgroundSyncOutcome(result);
-      if (outcome) {
-        reportOutcome(outcome, {
-          toast: outcome.status === 'failed' || (outcome.meta?.created as number) > 0,
-          log: true,
-        });
+      try {
+        const result = await paymentSyncOrchestrator.runSync(reason);
+        const outcome = formatBackgroundSyncOutcome(result);
+
+        if (outcome) {
+          reportOutcome(outcome, {
+            toast:
+              outcome.status === 'failed' ||
+              outcome.status === 'partial' ||
+              (outcome.meta?.created as number) > 0,
+            log: true,
+          });
+        } else if (result.errorMessage) {
+          reportOutcome(
+            {
+              kind: 'background_sync',
+              status: 'failed',
+              title: 'Sincronización fallida',
+              message: result.errorMessage,
+              meta: {
+                syncRunId: result.syncRunId,
+                errorCode: result.errorCode ?? 'unknown',
+                reason: result.reason,
+              },
+            },
+            { toast: true, log: true }
+          );
+        }
+
+        void queryClient.invalidateQueries({ queryKey: queryKeys.paymentRegisters.lists() });
+        void activityLogSyncService.flushPending();
+      } catch (error) {
+        reportError('background_sync', error, 'No se pudo sincronizar en segundo plano.');
       }
-      void queryClient.invalidateQueries({ queryKey: queryKeys.paymentRegisters.lists() });
-      void activityLogSyncService.flushPending();
     };
 
     void sync('startup');

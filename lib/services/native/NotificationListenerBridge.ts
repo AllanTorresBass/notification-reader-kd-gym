@@ -4,7 +4,8 @@ import ExpoAndroidNotificationListenerService, {
 } from 'expo-android-notification-listener-service';
 import type { EventSubscription } from 'expo-modules-core';
 
-import { logger } from '@/lib/logger';
+import { reportServiceError } from '@/lib/feedback/report-service-error';
+import { copy } from '@/constants/copy';
 
 export class NotificationListenerBridge {
   isSupported(): boolean {
@@ -18,7 +19,12 @@ export class NotificationListenerBridge {
     try {
       return ExpoAndroidNotificationListenerService.isNotificationPermissionGranted();
     } catch (error) {
-      logger.error('Failed to check notification access', { error: String(error) });
+      reportServiceError(
+        'listener_bridge_failure',
+        error,
+        copy.feedback.infra.listenerBridgeMessage,
+        { source: 'NotificationListenerBridge.isAccessGranted' }
+      );
       return false;
     }
   }
@@ -50,7 +56,12 @@ export class NotificationListenerBridge {
       }
       return mod.pullQueuedNotifications();
     } catch (error) {
-      logger.error('Failed to pull queued notifications', { error: String(error) });
+      reportServiceError(
+        'listener_bridge_failure',
+        error,
+        copy.feedback.infra.listenerBridgeMessage,
+        { source: 'NotificationListenerBridge.pullQueuedNotifications' }
+      );
       return [];
     }
   }
@@ -68,7 +79,12 @@ export class NotificationListenerBridge {
       }
       return mod.syncActiveNotifications();
     } catch (error) {
-      logger.error('Failed to sync active notifications', { error: String(error) });
+      reportServiceError(
+        'listener_bridge_failure',
+        error,
+        copy.feedback.infra.listenerBridgeMessage,
+        { source: 'NotificationListenerBridge.syncActiveNotifications' }
+      );
       return 0;
     }
   }
@@ -86,7 +102,12 @@ export class NotificationListenerBridge {
       }
       return mod.getActiveNotifications();
     } catch (error) {
-      logger.error('Failed to read active notifications from shade', { error: String(error) });
+      reportServiceError(
+        'listener_bridge_failure',
+        error,
+        copy.feedback.infra.listenerBridgeMessage,
+        { source: 'NotificationListenerBridge.getActiveNotifications' }
+      );
       return [];
     }
   }
@@ -104,7 +125,12 @@ export class NotificationListenerBridge {
       }
       return mod.isListenerConnected();
     } catch (error) {
-      logger.error('Failed to check notification listener connection', { error: String(error) });
+      reportServiceError(
+        'listener_bridge_failure',
+        error,
+        copy.feedback.infra.listenerBridgeMessage,
+        { source: 'NotificationListenerBridge.isListenerConnected' }
+      );
       return false;
     }
   }

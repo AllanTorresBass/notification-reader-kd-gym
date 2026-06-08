@@ -22,7 +22,7 @@ import { spacing } from '@/constants/theme';
 import { palette, resolveThemeMode } from '@/constants/theme';
 import { usePreferencesStore } from '@/stores/preferences-store';
 
-export { ErrorBoundary } from 'expo-router';
+export { AppErrorBoundary as ErrorBoundary } from '@/components/feedback/AppErrorBoundary';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -73,6 +73,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="invoices" options={{ headerShown: false }} />
       </Stack>
     </AppProviders>
   );

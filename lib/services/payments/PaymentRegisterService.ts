@@ -1,6 +1,7 @@
 import type { NotificationRecord } from '@/types/notification/notification.types';
 import type { ParsedPagomovil } from '@/types/payment/parsed-payment.types';
 import type { PaymentRegisterCacheEntry } from '@/types/payment/payment-register-cache.types';
+import type { PaymentRegisterListFilters } from '@/types/payment/payment-register-cache.types';
 import type {
   IngestNotificationResult,
   PaymentActionResult,
@@ -9,6 +10,7 @@ import type {
 import { paymentRegisterApiService } from '@/lib/api-client/payment-registers/PaymentRegisterApiService';
 import { ApiError } from '@/lib/api-client/base/BaseApiClient';
 import { authEvents } from '@/lib/auth/auth-events';
+import { reportSyncJobFailure } from '@/lib/feedback/sync-job-feedback';
 import { logger } from '@/lib/logger';
 import { paymentRegisterCacheRepository } from '@/lib/services/payments/PaymentRegisterCacheRepository';
 import { paymentSyncQueue } from '@/lib/services/sync/payment-sync-queue';
@@ -300,6 +302,8 @@ export class PaymentRegisterService {
         const apiError = error instanceof ApiError ? error : null;
         const message = getUserErrorMessage(error, 'action', 'No se pudo sincronizar con kd-gym.').message;
 
+        reportSyncJobFailure(job.type, job.localId, error);
+
         if (apiError?.code === 'auth_unauthorized') {
           authEvents.emitUnauthorized();
           break;
@@ -401,8 +405,12 @@ export class PaymentRegisterService {
     }
   }
 
-  async list(offset: number, limit: number) {
-    return paymentRegisterCacheRepository.listSlice(offset, limit);
+  async list(offset: number, limit: number, filters?: PaymentRegisterListFilters) {
+    return paymentRegisterCacheRepository.listSlice(offset, limit, filters);
+  }
+
+  async getFilterCounts() {
+    return paymentRegisterCacheRepository.getFilterCounts();
   }
 
   async clearLocalCache(): Promise<void> {

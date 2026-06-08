@@ -1,4 +1,4 @@
-import type { InvoiceStatus, SyncStatus } from '@/types/payment/payment-register-cache.types';
+import type { PaymentRegisterInvoiceStatus, SyncStatus } from '@/types/payment/payment-register-cache.types';
 
 const SYNC_RANK: Record<SyncStatus, number> = {
   sync_failed: 0,
@@ -9,7 +9,10 @@ const SYNC_RANK: Record<SyncStatus, number> = {
 };
 
 /** Keep the most advanced invoice status when merging local cache with remote pull. */
-export function mergeInvoiceStatus(local: InvoiceStatus, remote: InvoiceStatus): InvoiceStatus {
+export function mergeInvoiceStatus(
+  local: PaymentRegisterInvoiceStatus,
+  remote: PaymentRegisterInvoiceStatus
+): PaymentRegisterInvoiceStatus {
   if (local === 'paid' || remote === 'paid') return 'paid';
   if (local === 'pending' || remote === 'pending') return 'pending';
   return remote ?? local ?? null;
@@ -19,7 +22,10 @@ export function mergeInvoiceStatus(local: InvoiceStatus, remote: InvoiceStatus):
  * Never downgrade sync progress on pull — e.g. keep payment_confirmed when the
  * register list still shows invoice pending/null after a local confirm.
  */
-export function mergeSyncStatus(existing: SyncStatus, remoteInvoiceStatus: InvoiceStatus): SyncStatus {
+export function mergeSyncStatus(
+  existing: SyncStatus,
+  remoteInvoiceStatus: PaymentRegisterInvoiceStatus
+): SyncStatus {
   if (existing === 'sync_failed' && remoteInvoiceStatus === 'paid') {
     return 'payment_confirmed';
   }
@@ -39,7 +45,7 @@ export function mergeSyncStatus(existing: SyncStatus, remoteInvoiceStatus: Invoi
 
 export function canAssignClientToPayment(entry: {
   syncStatus: SyncStatus;
-  invoiceStatus: InvoiceStatus;
+  invoiceStatus: PaymentRegisterInvoiceStatus;
 }): boolean {
   if (entry.syncStatus === 'client_assigned') return false;
   return entry.syncStatus === 'payment_confirmed' || entry.invoiceStatus === 'paid';

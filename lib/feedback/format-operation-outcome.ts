@@ -5,6 +5,8 @@ import {
   formatAssignClientMessages,
   formatConfirmPaymentMessages,
 } from '@/lib/feedback/payment-action-messages';
+import { classifyError } from '@/lib/errors/classify-error';
+import { withSyncRunMeta } from '@/lib/feedback/sync-run-context';
 import { getUserErrorMessage } from '@/lib/utils/user-error-message';
 import { formatPagoDisplay } from '@/lib/utils/format-pago';
 import type {
@@ -153,7 +155,14 @@ export function formatPullSyncOutcome(result: PaymentSyncResult): OperationOutco
       'failed',
       fb.sync.failedTitle,
       result.errorMessage,
-      { meta: { errorCode: result.errorCode ?? 'unknown', pendingJobs: result.pendingJobs } }
+      {
+        meta: withSyncRunMeta({
+          syncRunId: result.syncRunId,
+          errorCode: result.errorCode ?? 'unknown',
+          pendingJobs: result.pendingJobs,
+          reason: result.reason,
+        }),
+      }
     );
   }
   if (result.durationMs === 0 && result.created === 0 && result.enqueued === 0 && !result.pulled) {
@@ -161,16 +170,19 @@ export function formatPullSyncOutcome(result: PaymentSyncResult): OperationOutco
       'background_sync',
       'skipped',
       fb.sync.inFlightTitle,
-      fb.sync.inFlightMessage
+      fb.sync.inFlightMessage,
+      { meta: withSyncRunMeta({ syncRunId: result.syncRunId }) }
     );
   }
   return outcome('pull_sync', 'completed', fb.sync.completeTitle, buildSyncSummary(result), {
-    meta: {
+    meta: withSyncRunMeta({
+      syncRunId: result.syncRunId,
       created: result.created,
       enqueued: result.enqueued,
       pendingJobs: result.pendingJobs,
       durationMs: result.durationMs,
-    },
+      reason: result.reason,
+    }),
   });
 }
 
@@ -282,7 +294,75 @@ export function formatErrorOutcome(
   context: 'fetch' | 'action' = 'action'
 ): OperationOutcome {
   const { title, message } = getUserErrorMessage(error, context, fallback);
-  return outcome(kind, 'failed', title, message);
+  const classified = classifyError(error);
+  return outcome(kind, 'failed', title, message, {
+    meta: withSyncRunMeta({
+      errorCode: classified.errorCode,
+      category: classified.category,
+      recoverable: classified.recoverable,
+    }),
+  });
+}
+
+export function formatSessionExpiredOutcome(): OperationOutcome {
+  return outcome(
+    'session_expired',
+    'failed',
+    fb.infra.sessionExpiredTitle,
+    fb.infra.sessionExpiredMessage
+  );
+}
+
+export function formatStorageFailureOutcome(detail?: string): OperationOutcome {
+  return outcome(
+    'storage_failure',
+    'failed',
+    fb.infra.storageFailureTitle,
+    detail ?? fb.infra.storageFailureMessage
+  );
+}
+
+export function formatListenerBridgeFailureOutcome(detail?: string): OperationOutcome {
+  return outcome(
+    'listener_bridge_failure',
+    'failed',
+    fb.infra.listenerBridgeTitle,
+    detail ?? fb.infra.listenerBridgeMessage
+  );
+}
+
+export function formatActivityLogSyncFailureOutcome(detail?: string): OperationOutcome {
+  return outcome(
+    'activity_log_sync',
+    'failed',
+    fb.infra.activityLogSyncTitle,
+    detail ?? fb.infra.activityLogSyncMessage
+  );
+}
+
+export function formatSyncJobFailedOutcome(message: string, jobType?: string): OperationOutcome {
+  return outcome('sync_job_failed', 'failed', fb.infra.syncJobFailedTitle, message, {
+    meta: withSyncRunMeta({
+      ...(jobType ? { jobType } : {}),
+    }),
+  });
+}
+
+export function formatUnhandledExceptionOutcome(detail?: string): OperationOutcome {
+  return outcome(
+    'unhandled_exception',
+    'failed',
+    fb.infra.unhandledTitle,
+    detail ?? fb.infra.unhandledMessage
+  );
+}
+
+export function formatEntitySyncError(message: string): OperationOutcome {
+  return outcome('pull_sync', 'failed', fb.entitySync.title, message);
+}
+
+export function formatValidationOutcome(title: string, message: string): OperationOutcome {
+  return outcome('manual_register', 'failed', title, message);
 }
 
 export function formatLoginOutcome(success: boolean, error?: unknown): OperationOutcome {
@@ -333,6 +413,19 @@ export function formatCreateClientOutcome(clientName: string): OperationOutcome 
     'completed',
     fb.client.createdTitle,
     fb.client.createdMessage(clientName)
+  );
+}
+
+export function formatCreateInvoiceOutcome(invoice: {
+  id: string;
+  invoiceNumber: string;
+}): OperationOutcome {
+  return outcome(
+    'create_invoice',
+    'completed',
+    copy.facturas.successTitle,
+    copy.facturas.successMessage(invoice.invoiceNumber),
+    { meta: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber } }
   );
 }
 

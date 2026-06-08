@@ -38,6 +38,10 @@ jest.mock('@/stores/api-config-store', () => ({
   useApiConfigStore: { getState: () => ({ setLastSyncAt: jest.fn() }) },
 }));
 
+jest.mock('@/lib/feedback/sync-job-feedback', () => ({
+  reportSyncJobFailure: jest.fn(),
+}));
+
 import { paymentRegisterService } from '@/lib/services/payments/PaymentRegisterService';
 
 const BDV_NOTIFICATION: NotificationRecord = {

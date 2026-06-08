@@ -1,5 +1,7 @@
 import { selectAuthStatus, selectTokenExpiresInMs } from '@/lib/auth/auth-selectors';
 import { authEvents, type SyncErrorCode } from '@/lib/auth/auth-events';
+import { reportServiceError } from '@/lib/feedback/report-service-error';
+import { beginSyncRun, endSyncRun } from '@/lib/feedback/sync-run-context';
 import { logger } from '@/lib/logger';
 import { waitForApiStoresHydration } from '@/lib/storage/wait-for-persist-hydration';
 import { authApiService } from '@/lib/api-client/auth/AuthApiService';
@@ -27,6 +29,7 @@ export interface PaymentSyncResult {
   durationMs: number;
   errorCode: SyncErrorCode | null;
   errorMessage: string | null;
+  syncRunId: string;
 }
 
 const REMOTE_SYNC_MIN_INTERVAL_MS = 30_000;
@@ -40,7 +43,10 @@ function shouldRunRemoteSync(reason: PaymentSyncReason): boolean {
 
 export class PaymentSyncOrchestrator {
   async runSync(reason: PaymentSyncReason): Promise<PaymentSyncResult> {
+    const syncRunId = beginSyncRun();
+
     if (syncInFlight) {
+      endSyncRun();
       return {
         reason,
         authenticated: useApiAuthStore.getState().isAuthenticated(),
@@ -51,6 +57,7 @@ export class PaymentSyncOrchestrator {
         durationMs: 0,
         errorCode: null,
         errorMessage: null,
+        syncRunId,
       };
     }
 
@@ -79,6 +86,7 @@ export class PaymentSyncOrchestrator {
           startedAt,
           errorCode: null,
           errorMessage: null,
+          syncRunId,
         });
       }
 
@@ -92,6 +100,7 @@ export class PaymentSyncOrchestrator {
           startedAt,
           errorCode: null,
           errorMessage: null,
+          syncRunId,
         });
       }
 
@@ -102,6 +111,11 @@ export class PaymentSyncOrchestrator {
         errorCode = apiError?.code ?? 'auth_unauthorized';
         errorMessage = getUserErrorMessage(error, 'action', 'Sesión inválida.').message;
         useApiAuthStore.getState().setLastSyncError(errorMessage);
+        reportServiceError('session_expired', error, errorMessage, {
+          source: 'PaymentSyncOrchestrator.pingMe',
+          reason,
+          toast: false,
+        });
         return this.buildResult({
           reason,
           authenticated: false,
@@ -111,6 +125,7 @@ export class PaymentSyncOrchestrator {
           startedAt,
           errorCode,
           errorMessage,
+          syncRunId,
         });
       }
 
@@ -128,6 +143,7 @@ export class PaymentSyncOrchestrator {
       logger.warn('Payment sync orchestrator failed', { reason, errorCode, errorMessage });
     } finally {
       syncInFlight = false;
+      endSyncRun();
     }
 
     return this.buildResult({
@@ -139,6 +155,7 @@ export class PaymentSyncOrchestrator {
       startedAt,
       errorCode,
       errorMessage,
+      syncRunId,
     });
   }
 
@@ -151,6 +168,7 @@ export class PaymentSyncOrchestrator {
     startedAt: number;
     errorCode: SyncErrorCode | null;
     errorMessage: string | null;
+    syncRunId: string;
   }): Promise<PaymentSyncResult> {
     const pendingJobs = await paymentSyncQueue.getPendingCount();
     const result: PaymentSyncResult = {
@@ -163,6 +181,7 @@ export class PaymentSyncOrchestrator {
       durationMs: Date.now() - input.startedAt,
       errorCode: input.errorCode,
       errorMessage: input.errorMessage,
+      syncRunId: input.syncRunId,
     };
 
     logger.info('Payment sync completed', {
@@ -173,6 +192,7 @@ export class PaymentSyncOrchestrator {
       pendingJobs: result.pendingJobs,
       pulled: result.pulled,
       durationMs: result.durationMs,
+      syncRunId: result.syncRunId,
       baseUrl: useApiConfigStore.getState().baseUrl,
       authStatus: selectAuthStatus(useApiAuthStore.getState()),
       tokenExpiresInMs: selectTokenExpiresInMs(useApiAuthStore.getState()),
@@ -187,4 +207,10 @@ export const paymentSyncOrchestrator = new PaymentSyncOrchestrator();
 
 authEvents.onUnauthorized(() => {
   useApiAuthStore.getState().setLastSyncError('Sesión expirada — inicia sesión de nuevo.');
+  reportServiceError(
+    'session_expired',
+    new Error('Sesión expirada'),
+    'Sesión expirada — inicia sesión de nuevo.',
+    { source: 'authEvents.onUnauthorized', toast: false }
+  );
 });
