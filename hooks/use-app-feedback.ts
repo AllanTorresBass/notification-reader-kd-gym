@@ -1,6 +1,6 @@
 import { reportError, reportOutcome, reportOutcomeWithPolicy } from '@/lib/feedback/report-feedback';
 import type { OperationKind, OperationOutcome } from '@/types/feedback/operation-outcome.types';
-import type { ReportOutcomeOptions } from '@/lib/feedback/report-feedback';
+import type { ReportOutcomeOptions } from '@/types/feedback/report-outcome.types';
 
 export function useAppFeedback() {
   return {

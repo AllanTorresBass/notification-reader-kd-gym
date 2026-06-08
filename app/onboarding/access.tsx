@@ -21,7 +21,7 @@ export default function OnboardingAccessScreen() {
   const checkAccess = async () => {
     const result = await refetch();
     const granted = result.data ?? hasAccess;
-    reportOutcome(formatAccessCheckOutcome(granted), { toast: true, log: false });
+    reportOutcome(formatAccessCheckOutcome(granted), { toast: true, log: true });
   };
 
   return (

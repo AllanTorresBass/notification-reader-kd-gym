@@ -9,6 +9,7 @@ import type { OperationKind } from '@/types/feedback/operation-outcome.types';
 const PASSIVE_FETCH_KINDS: OperationKind[] = [
   'list_fetch',
   'invoice_list_fetch',
+  'invoice_detail_fetch',
   'client_search',
   'notification_list_fetch',
 ];
@@ -79,6 +80,23 @@ export function resolvePresentationPolicy({
       sync: true,
       haptic: false,
       surfaces: ['toast', 'log'],
+    };
+  }
+
+  if (
+    kind === 'session_expired' ||
+    kind === 'storage_failure' ||
+    kind === 'listener_bridge_failure' ||
+    kind === 'activity_log_sync' ||
+    kind === 'sync_job_failed' ||
+    kind === 'unhandled_exception'
+  ) {
+    return {
+      toast: false,
+      log: true,
+      sync: true,
+      haptic: false,
+      surfaces: ['log'],
     };
   }
 

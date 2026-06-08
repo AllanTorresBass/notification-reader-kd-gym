@@ -40,12 +40,12 @@ describe('activity-log-store', () => {
     expect(entries[0].synced).toBe(false);
   });
 
-  it('caps at 50 entries', async () => {
-    for (let i = 0; i < 55; i += 1) {
+  it('caps at 200 entries', async () => {
+    for (let i = 0; i < 205; i += 1) {
       await appendActivityLog(sampleOutcome(i));
     }
-    expect(useActivityLogStore.getState().entries).toHaveLength(50);
-    expect(useActivityLogStore.getState().entries[0].outcome.title).toBe('Sync 54');
+    expect(useActivityLogStore.getState().entries).toHaveLength(200);
+    expect(useActivityLogStore.getState().entries[0].outcome.title).toBe('Sync 204');
   });
 
   it('clears all entries', async () => {

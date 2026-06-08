@@ -22,7 +22,7 @@ import { spacing } from '@/constants/theme';
 import { palette, resolveThemeMode } from '@/constants/theme';
 import { usePreferencesStore } from '@/stores/preferences-store';
 
-export { ErrorBoundary } from 'expo-router';
+export { AppErrorBoundary as ErrorBoundary } from '@/components/feedback/AppErrorBoundary';
 
 SplashScreen.preventAutoHideAsync();
 

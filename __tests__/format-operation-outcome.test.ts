@@ -20,6 +20,8 @@ const baseEntry: PaymentRegisterCacheEntry = {
   invoiceStatus: null,
   syncStatus: 'pending_sync',
   lastSyncError: null,
+  assignedClientId: null,
+  assignedClientName: null,
   name: null,
   pago: '15000.00',
   mobile: '0412-1222392',
@@ -155,6 +157,7 @@ describe('formatPullSyncOutcome', () => {
       durationMs: 100,
       errorCode: 'network',
       errorMessage: 'Sin conexión',
+      syncRunId: 'run-1',
     });
     expect(outcome.status).toBe('failed');
     expect(outcome.title).toBe(copy.feedback.sync.failedTitle);
@@ -171,6 +174,7 @@ describe('formatPullSyncOutcome', () => {
       durationMs: 0,
       errorCode: null,
       errorMessage: null,
+      syncRunId: 'run-1',
     });
     expect(outcome.status).toBe('skipped');
     expect(outcome.title).toBe(copy.feedback.sync.inFlightTitle);
@@ -187,6 +191,7 @@ describe('formatPullSyncOutcome', () => {
       durationMs: 500,
       errorCode: null,
       errorMessage: null,
+      syncRunId: 'run-1',
     });
     expect(outcome.status).toBe('completed');
     expect(outcome.message).toContain('2 pagos nuevos importados');

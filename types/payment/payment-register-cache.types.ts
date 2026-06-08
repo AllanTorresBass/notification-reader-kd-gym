@@ -5,7 +5,7 @@ export type SyncStatus =
   | 'client_assigned'
   | 'sync_failed';
 
-export type InvoiceStatus = 'pending' | 'paid' | null;
+export type PaymentRegisterInvoiceStatus = 'pending' | 'paid' | null;
 
 export interface PaymentRegisterCacheEntry {
   localId: string;
@@ -19,7 +19,7 @@ export interface PaymentRegisterCacheEntry {
   paymentTime: string;
   notificationKey: string;
   notificationId: string;
-  invoiceStatus: InvoiceStatus;
+  invoiceStatus: PaymentRegisterInvoiceStatus;
   syncStatus: SyncStatus;
   assignedClientId: string | null;
   assignedClientName: string | null;

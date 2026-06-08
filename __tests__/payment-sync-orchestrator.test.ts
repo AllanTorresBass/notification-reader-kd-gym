@@ -53,6 +53,10 @@ jest.mock('@/stores/api-config-store', () => ({
   },
 }));
 
+jest.mock('@/lib/feedback/report-service-error', () => ({
+  reportServiceError: jest.fn(),
+}));
+
 import { paymentSyncOrchestrator } from '@/lib/services/payments/PaymentSyncOrchestrator';
 
 describe('PaymentSyncOrchestrator', () => {

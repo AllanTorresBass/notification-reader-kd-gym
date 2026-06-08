@@ -20,22 +20,15 @@ import { useCreateInvoiceMutation } from '@/hooks/use-invoices';
 import { useActiveGymServicesQuery } from '@/hooks/use-gym-services';
 import { copy } from '@/constants/copy';
 
-export type WizardStep = 'setup' | 'review';
-
-export interface SetupErrors {
-  client?: string;
-  service?: string;
-  payment?: string;
-  reference?: string;
-  paymentDate?: string;
-  paymentTime?: string;
-}
-
+import type {
+  InvoiceSetupErrors,
+  InvoiceWizardStep,
+} from '@/types/invoice/invoice-wizard.types';
 export function useInvoiceWizard() {
   const createInvoice = useCreateInvoiceMutation();
   const { data: services } = useActiveGymServicesQuery();
 
-  const [step, setStep] = useState<WizardStep>('setup');
+  const [step, setStep] = useState<InvoiceWizardStep>('setup');
   const [selectedClient, setSelectedClient] = useState<RemoteClient | null>(null);
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [paymentType, setPaymentType] = useState<PaymentType | ''>('');
@@ -47,7 +40,7 @@ export function useInvoiceWizard() {
   const [discount, setDiscount] = useState(0);
   const [notes, setNotes] = useState('');
   const [payment, setPayment] = useState<PaymentFormValues>(getDefaultPaymentValues());
-  const [setupErrors, setSetupErrors] = useState<SetupErrors>({});
+  const [setupErrors, setSetupErrors] = useState<InvoiceSetupErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -137,7 +130,7 @@ export function useInvoiceWizard() {
   };
 
   const validateSetup = (): boolean => {
-    const errors: SetupErrors = {};
+    const errors: InvoiceSetupErrors = {};
     if (!selectedClient) errors.client = copy.facturas.errors.clientRequired;
     if (!selectedServiceId) errors.service = copy.facturas.errors.serviceRequired;
     if (!paymentType) errors.payment = copy.facturas.errors.paymentRequired;

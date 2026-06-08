@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 
 import { STORAGE_KEYS, STORAGE_VERSION } from '@/constants/storage-keys';
+import { formatStorageFailureOutcome } from '@/lib/feedback/format-operation-outcome';
 import { secureStorageClient } from '@/lib/storage/secure-storage-client';
 import type { ActivityLogEntry, OperationOutcome } from '@/types/feedback/operation-outcome.types';
 
-const MAX_ENTRIES = 50;
+export const MAX_ENTRIES = 200;
+const MAX_FAILED_ENTRIES = 100;
 
 export interface StoredActivityLogEntry extends ActivityLogEntry {
   synced: boolean;
@@ -38,11 +40,52 @@ function createEntry(outcome: OperationOutcome): StoredActivityLogEntry {
   };
 }
 
+function isPriorityOutcome(status: OperationOutcome['status']): boolean {
+  return status === 'failed' || status === 'partial';
+}
+
+export function trimActivityLogEntries(
+  entries: StoredActivityLogEntry[]
+): StoredActivityLogEntry[] {
+  if (entries.length <= MAX_ENTRIES) {
+    return entries;
+  }
+
+  const priority = entries.filter((entry) => isPriorityOutcome(entry.outcome.status));
+  const regular = entries.filter((entry) => !isPriorityOutcome(entry.outcome.status));
+
+  const keptPriority = priority.slice(0, MAX_FAILED_ENTRIES);
+  const remainingSlots = MAX_ENTRIES - keptPriority.length;
+  const keptRegular = regular.slice(0, Math.max(0, remainingSlots));
+
+  return [...keptPriority, ...keptRegular]
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, MAX_ENTRIES);
+}
+
+let storageFailureReported = false;
+
 async function persistEntries(entries: StoredActivityLogEntry[]): Promise<void> {
+  const trimmed = trimActivityLogEntries(entries);
   await secureStorageClient.setJson(STORAGE_KEYS.activityLog, {
     version: STORAGE_VERSION as 1,
-    entries: entries.slice(0, MAX_ENTRIES),
+    entries: trimmed,
   } satisfies ActivityLogPersistEnvelope);
+}
+
+function reportStorageFailureOnce(error: unknown): void {
+  if (storageFailureReported) return;
+  storageFailureReported = true;
+
+  void import('@/lib/feedback/report-feedback').then(({ reportOutcome }) => {
+    reportOutcome(formatStorageFailureOutcome(), { toast: false, log: true, sync: false });
+  });
+
+  void import('@/lib/logger').then(({ logger }) => {
+    logger.error('Activity log persist failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
 }
 
 export const useActivityLogStore = create<ActivityLogState>((set, get) => ({
@@ -59,7 +102,7 @@ export const useActivityLogStore = create<ActivityLogState>((set, get) => ({
       STORAGE_KEYS.activityLog
     );
     if (envelope?.version === 1 && Array.isArray(envelope.entries)) {
-      set({ entries: envelope.entries.slice(0, MAX_ENTRIES), hydrated: true });
+      set({ entries: trimActivityLogEntries(envelope.entries), hydrated: true });
       return;
     }
 
@@ -68,9 +111,11 @@ export const useActivityLogStore = create<ActivityLogState>((set, get) => ({
 
   append: (outcome) => {
     const entry = createEntry(outcome);
-    const entries = [entry, ...get().entries].slice(0, MAX_ENTRIES);
+    const entries = trimActivityLogEntries([entry, ...get().entries]);
     set({ entries });
-    void persistEntries(entries);
+    void persistEntries(entries).catch((error) => {
+      reportStorageFailureOnce(error);
+    });
     return entry;
   },
 
@@ -79,11 +124,14 @@ export const useActivityLogStore = create<ActivityLogState>((set, get) => ({
       entry.id === clientEventId ? { ...entry, synced: true, remoteId } : entry
     );
     set({ entries });
-    void persistEntries(entries);
+    void persistEntries(entries).catch((error) => {
+      reportStorageFailureOnce(error);
+    });
   },
 
   clear: async () => {
     set({ entries: [] });
+    storageFailureReported = false;
     await persistEntries([]);
   },
 
@@ -97,11 +145,13 @@ export const useActivityLogStore = create<ActivityLogState>((set, get) => ({
         byId.set(local.id, local);
       }
     }
-    const merged = [...byId.values()]
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, MAX_ENTRIES);
+    const merged = trimActivityLogEntries(
+      [...byId.values()].sort((a, b) => b.timestamp - a.timestamp)
+    );
     set({ entries: merged });
-    void persistEntries(merged);
+    void persistEntries(merged).catch((error) => {
+      reportStorageFailureOnce(error);
+    });
   },
 }));
 
@@ -112,4 +162,8 @@ export async function appendActivityLog(outcome: OperationOutcome): Promise<Stor
 
 export async function clearActivityLog(): Promise<void> {
   await useActivityLogStore.getState().clear();
+}
+
+export function resetActivityLogStorageFailureForTests(): void {
+  storageFailureReported = false;
 }

@@ -1,4 +1,5 @@
 import type { NotificationListFilters } from '@/types/notification/notification.types';
+import type { InvoiceListParamsInput } from '@/types/invoice/invoice.schemas';
 import type { PaymentRegisterListFilters } from '@/types/payment/payment-register-cache.types';
 
 export const queryKeys = {
@@ -39,7 +40,7 @@ export const queryKeys = {
   invoices: {
     all: ['invoices'] as const,
     lists: () => [...queryKeys.invoices.all, 'list'] as const,
-    list: (params: Record<string, unknown> = {}) =>
+    list: (params: Omit<InvoiceListParamsInput, 'page'> = {}) =>
       [...queryKeys.invoices.lists(), params] as const,
     detail: (id: string) => [...queryKeys.invoices.all, 'detail', id] as const,
   },

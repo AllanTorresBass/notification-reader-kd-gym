@@ -10,7 +10,7 @@ import { selectAuthStatus, selectIsAuthenticated } from '@/lib/auth/auth-selecto
 import { authApiService } from '@/lib/api-client/auth/AuthApiService';
 import { paymentSyncOrchestrator } from '@/lib/services/payments/PaymentSyncOrchestrator';
 import { useApiAuthStore } from '@/stores/api-auth-store';
-import type { ReportOutcomeOptions } from '@/lib/feedback/report-feedback';
+import type { ReportOutcomeOptions } from '@/types/feedback/report-outcome.types';
 
 export function useApiLoginMutation() {
   const setAuth = useApiAuthStore((s) => s.setAuth);

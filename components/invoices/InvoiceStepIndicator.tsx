@@ -3,15 +3,15 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { spacing } from '@/constants/theme';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import type { WizardStep } from '@/hooks/use-invoice-wizard';
+import type { InvoiceWizardStep } from '@/types/invoice/invoice-wizard.types';
 
 interface InvoiceStepIndicatorProps {
-  step: WizardStep;
+  step: InvoiceWizardStep;
   setupLabel: string;
   reviewLabel: string;
 }
 
-const STEPS: WizardStep[] = ['setup', 'review'];
+const STEPS: InvoiceWizardStep[] = ['setup', 'review'];
 
 export function InvoiceStepIndicator({ step, setupLabel, reviewLabel }: InvoiceStepIndicatorProps) {
   const { colors } = useThemeColors();

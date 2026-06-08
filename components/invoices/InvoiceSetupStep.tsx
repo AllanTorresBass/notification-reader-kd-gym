@@ -8,7 +8,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { copy } from '@/constants/copy';
 import { radius, spacing } from '@/constants/theme';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import type { SetupErrors } from '@/hooks/use-invoice-wizard';
+import type { InvoiceSetupErrors } from '@/types/invoice/invoice-wizard.types';
 import type { RemoteClient } from '@/lib/api-client/clients/ClientApiService';
 import { formatCurrency } from '@/lib/utils/format-invoice';
 import { defaultPaymentTypeForCurrency } from '@/lib/invoices/invoice-draft';
@@ -29,7 +29,7 @@ interface InvoiceSetupStepProps {
   onPaymentTypeChange: (type: PaymentType) => void;
   payment: PaymentFormValues;
   onPaymentChange: (payment: PaymentFormValues) => void;
-  errors: SetupErrors;
+  errors: InvoiceSetupErrors;
 }
 
 export function InvoiceSetupStep({

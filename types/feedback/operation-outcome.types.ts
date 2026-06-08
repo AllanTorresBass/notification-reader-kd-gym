@@ -21,9 +21,16 @@ export type OperationKind =
   | 'create_client'
   | 'create_invoice'
   | 'invoice_list_fetch'
+  | 'invoice_detail_fetch'
   | 'client_search'
   | 'access_check'
-  | 'onboarding_skip';
+  | 'onboarding_skip'
+  | 'session_expired'
+  | 'storage_failure'
+  | 'listener_bridge_failure'
+  | 'activity_log_sync'
+  | 'sync_job_failed'
+  | 'unhandled_exception';
 
 export interface OperationOutcome {
   kind: OperationKind;

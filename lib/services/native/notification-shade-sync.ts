@@ -2,9 +2,8 @@ import { Platform } from 'react-native';
 import type { NotificationData } from 'expo-android-notification-listener-service';
 
 import { logger } from '@/lib/logger';
+import { ingestNotificationWithFeedback } from '@/lib/feedback/ingest-notification-with-feedback';
 import { notificationListenerBridge } from '@/lib/services/native/NotificationListenerBridge';
-import { notificationService } from '@/lib/services/notifications/NotificationService';
-import { paymentRegisterService } from '@/lib/services/payments/PaymentRegisterService';
 
 export type NotificationShadeSyncResult = {
   scanned: number;
@@ -27,7 +26,12 @@ async function ingestEvents(
       continue;
     }
     seenKeys.add(event.key);
-    const saved = await ingestIfAllowed(event, options);
+    const saved = await ingestNotificationWithFeedback(event, {
+      allowedPackages: options.allowedPackages,
+      retentionDays: options.retentionDays,
+      captureRawPayload: options.captureRawPayload,
+      source: 'notification-shade-sync',
+    });
     if (saved) {
       ingested += 1;
     }
@@ -51,7 +55,6 @@ export async function syncNotificationsFromShade(options: {
   const seenKeys = new Set<string>();
   let ingested = await ingestEvents(active, seenKeys, options);
 
-  // Keep live listener + queue path for notifications posted after the direct read.
   notificationListenerBridge.syncActiveNotifications();
   const queued = notificationListenerBridge.pullQueuedNotifications();
   ingested += await ingestEvents(queued, seenKeys, options);
@@ -68,23 +71,4 @@ export async function syncNotificationsFromShade(options: {
   }
 
   return { scanned, ingested, listenerConnected };
-}
-
-async function ingestIfAllowed(
-  event: NotificationData,
-  options: {
-    allowedPackages: string[];
-    retentionDays: number;
-    captureRawPayload: boolean;
-  }
-): Promise<boolean> {
-  if (!options.allowedPackages.includes(event.packageName)) {
-    return false;
-  }
-  const record = await notificationService.ingest(event, {
-    retentionDays: options.retentionDays,
-    captureRawPayload: options.captureRawPayload,
-  });
-  await paymentRegisterService.ingestFromNotification(record);
-  return true;
 }

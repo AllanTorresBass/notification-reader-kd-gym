@@ -382,5 +382,22 @@ export const copy = {
       skipConnectTitle: 'Conexión omitida',
       skipConnectMessage: 'Podrás conectar kd-gym más tarde desde Ajustes.',
     },
+    infra: {
+      sessionExpiredTitle: 'Sesión expirada',
+      sessionExpiredMessage: 'Inicia sesión de nuevo en Ajustes para sincronizar con kd-gym.',
+      storageFailureTitle: 'Error de almacenamiento',
+      storageFailureMessage: 'No se pudo guardar en el dispositivo. Revisa espacio disponible.',
+      listenerBridgeTitle: 'Error del lector de notificaciones',
+      listenerBridgeMessage: 'Android no respondió al lector. Revisa permisos o reinicia la app.',
+      activityLogSyncTitle: 'Actividad no sincronizada',
+      activityLogSyncMessage: 'No se pudo subir el historial a kd-gym. Se guardó solo en este dispositivo.',
+      syncJobFailedTitle: 'Operación de cola fallida',
+      syncJobFailedMessage: (jobType?: string) =>
+        jobType
+          ? `No se pudo completar la operación "${jobType}" en kd-gym.`
+          : 'Una operación pendiente no se pudo enviar a kd-gym.',
+      unhandledTitle: 'Error inesperado',
+      unhandledMessage: 'La app encontró un problema. Intenta de nuevo o reinicia la app.',
+    },
   },
 } as const;

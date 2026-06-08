@@ -19,5 +19,6 @@ export const MAX_PAYMENT_REGISTER_ENTRIES = 500;
 export const DEFAULT_RETENTION_DAYS = 30;
 
 export const NOTIFICATION_PAGE_SIZE = 20;
+export const INVOICE_PAGE_SIZE = 30;
 
 export const STORAGE_WRITE_DEBOUNCE_MS = 200;

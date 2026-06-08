@@ -1,6 +1,7 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { useMemo } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { AppScreen } from '@/components/shared/AppScreen';
 import { FeedbackEmptyState } from '@/components/feedback/FeedbackEmptyState';
@@ -14,7 +15,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { copy } from '@/constants/copy';
 import { spacing } from '@/constants/theme';
 import { useIsApiAuthenticated } from '@/hooks/use-api-auth';
-import { useInvoicesQuery } from '@/hooks/use-invoices';
+import { useInvoicesInfiniteQuery } from '@/hooks/use-invoices';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import {
   formatCurrency,
@@ -62,12 +63,17 @@ export default function InvoicesTabScreen() {
   const router = useRouter();
   const { colors } = useThemeColors();
   const isAuthenticated = useIsApiAuthenticated();
-  const { data, isLoading, isError, refetch, isRefetching } = useInvoicesQuery(
-    { limit: 30, page: 1 },
-    isAuthenticated
-  );
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+  } = useInvoicesInfiniteQuery({}, isAuthenticated);
 
-  const invoices = data?.data ?? [];
+  const invoices = useMemo(() => data?.pages.flatMap((page) => page.data) ?? [], [data]);
 
   const openNewInvoice = () => router.push('/invoices/new');
 
@@ -123,12 +129,20 @@ export default function InvoicesTabScreen() {
               tintColor={colors.primary}
             />
           }
+          onEndReached={() => {
+            if (hasNextPage) void fetchNextPage();
+          }}
           renderItem={({ item }) => (
             <InvoiceListCard
               invoice={item}
               onPress={() => router.push(`/invoices/${item.id}`)}
             />
           )}
+          ListFooterComponent={
+            hasNextPage ? (
+              <ActivityIndicator color={colors.primary} style={styles.footer} />
+            ) : null
+          }
         />
       )}
     </AppScreen>
@@ -147,6 +161,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     gap: spacing.sm,
   },
+  footer: { paddingVertical: spacing.md },
   card: { marginBottom: spacing.sm },
   cardHeader: {
     flexDirection: 'row',
