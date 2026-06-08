@@ -1,12 +1,10 @@
-import { Search, X } from 'lucide-react-native';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { FilterChips } from '@/components/shared/FilterChips';
-import { TextInput } from '@/components/ui/TextInput';
+import { SearchBar } from '@/components/shared/SearchBar';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { copy } from '@/constants/copy';
 import { spacing } from '@/constants/theme';
-import { useThemeColors } from '@/hooks/use-theme-colors';
 import type {
   PaymentRegisterFilterCounts,
   PaymentStatusFilter,
@@ -57,8 +55,6 @@ export function PaymentFilterBar({
   onStatusChange,
   onSearchChange,
 }: PaymentFilterBarProps) {
-  const { colors } = useThemeColors();
-
   const chipOptions = FILTER_OPTIONS.map(({ value, labelKey }) => ({
     value,
     label: formatChipLabel(value, labelKey, counts),
@@ -69,28 +65,13 @@ export function PaymentFilterBar({
 
   return (
     <View style={styles.container}>
-      <View style={styles.searchRow}>
-        <Search color={colors.textMuted} size={18} style={styles.searchIcon} />
-        <TextInput
-          value={search}
-          onChangeText={onSearchChange}
-          placeholder={copy.pagos.filters.searchPlaceholder}
-          accessibilityLabel={copy.pagos.filters.searchAccessibility}
-          style={styles.searchInput}
-          returnKeyType="search"
-        />
-        {search.length > 0 ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={copy.pagos.filters.clearSearch}
-            onPress={() => onSearchChange('')}
-            hitSlop={8}
-            style={styles.clearButton}
-          >
-            <X color={colors.textMuted} size={18} />
-          </Pressable>
-        ) : null}
-      </View>
+      <SearchBar
+        value={search}
+        onChangeText={onSearchChange}
+        placeholder={copy.pagos.filters.searchPlaceholder}
+        accessibilityLabel={copy.pagos.filters.searchAccessibility}
+        clearAccessibilityLabel={copy.pagos.filters.clearSearch}
+      />
 
       <FilterChips options={chipOptions} value={status} onChange={onStatusChange} />
 
@@ -106,21 +87,5 @@ export function PaymentFilterBar({
 
 const styles = StyleSheet.create({
   container: { gap: spacing.sm, paddingBottom: spacing.sm },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  searchIcon: { position: 'absolute', left: spacing.md + spacing.sm, zIndex: 1 },
-  searchInput: {
-    flex: 1,
-    paddingLeft: spacing.xl + spacing.sm,
-    paddingRight: spacing.xl,
-  },
-  clearButton: {
-    position: 'absolute',
-    right: spacing.md + spacing.sm,
-    zIndex: 1,
-  },
   summary: { paddingHorizontal: spacing.md },
 });

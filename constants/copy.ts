@@ -169,9 +169,36 @@ export const copy = {
       tax: 'IVA',
       total: 'Total',
       payment: 'Pago registrado',
+      paymentDetails: 'Datos del pago móvil',
       notes: 'Notas',
       issueDate: 'Emisión',
       dueDate: 'Vencimiento',
+      viewInPagos: 'Ver en Pagos',
+      viewInvoice: 'Ver factura',
+      copyReference: 'Copiar referencia',
+      referenceCopied: 'Referencia copiada',
+      emitterPhone: 'Teléfono emisor',
+    },
+    search: {
+      placeholder: 'Buscar por referencia, factura o cliente…',
+      accessibility: 'Buscar facturas',
+      clear: 'Limpiar búsqueda',
+      referenceHint: 'Escribe al menos 4 dígitos para buscar por los últimos 4 de la referencia.',
+      noResults: (query: string) => `No hay facturas para "${query}".`,
+      noResultsHint: 'Revisa la pestaña Pagos por si el pago aún no tiene factura.',
+      localMatchBanner: 'Encontrado en Pagos en este dispositivo.',
+      lookupError: 'No se pudo buscar la factura por referencia.',
+      filters: {
+        all: 'Todas',
+        paid: 'Pagadas',
+        pending: 'Pendientes',
+      },
+      resultCount: (shown: number, total: number) =>
+        shown === total
+          ? `${shown} factura${shown === 1 ? '' : 's'}`
+          : `${shown} de ${total} facturas`,
+      activeFilter: (label: string) => `Filtro: ${label}`,
+      refChip: (ref: string) => `Ref · ${ref}`,
     },
   },
   ajustes: {

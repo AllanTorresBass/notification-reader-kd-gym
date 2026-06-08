@@ -1,4 +1,5 @@
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useRouter } from 'expo-router';
 import { forwardRef, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -37,6 +38,7 @@ export const PaymentDetailSheet = forwardRef<BottomSheet, PaymentDetailSheetProp
     { entry, actionFeedback, onConfirmPayment, onAssignClient, onCompleteManual, isConfirming },
     ref
   ) {
+    const router = useRouter();
     const { colors } = useThemeColors();
     const snapPoints = useMemo(() => ['55%', '90%'], []);
 
@@ -136,6 +138,14 @@ export const PaymentDetailSheet = forwardRef<BottomSheet, PaymentDetailSheetProp
                 syncStatus={entry.syncStatus}
                 invoiceStatus={entry.invoiceStatus}
               />
+
+              {entry.remoteInvoiceId ? (
+                <PrimaryButton
+                  label={copy.facturas.detail.viewInvoice}
+                  variant="secondary"
+                  onPress={() => router.push(`/invoices/${entry.remoteInvoiceId}`)}
+                />
+              ) : null}
 
               {showMissingBanner ? (
                 <Banner

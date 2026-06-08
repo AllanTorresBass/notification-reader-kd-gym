@@ -1,83 +1,28 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { AppScreen } from '@/components/shared/AppScreen';
 import { FeedbackEmptyState } from '@/components/feedback/FeedbackEmptyState';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { PrimaryButton } from '@/components/shared/PrimaryButton';
 import { SkeletonCard } from '@/components/shared/SkeletonCard';
-import { Badge } from '@/components/ui/Badge';
+import { InvoiceFilterBar } from '@/components/invoices/InvoiceFilterBar';
+import { InvoiceListCard } from '@/components/invoices/InvoiceListCard';
 import { Banner } from '@/components/ui/Banner';
-import { Card, CardContent } from '@/components/ui/Card';
-import { ThemedText } from '@/components/ui/ThemedText';
 import { copy } from '@/constants/copy';
 import { spacing } from '@/constants/theme';
-import { useIsApiAuthenticated } from '@/hooks/use-api-auth';
-import { useInvoicesInfiniteQuery } from '@/hooks/use-invoices';
+import { useInvoicesScreen } from '@/hooks/use-invoices-screen';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import {
-  formatCurrency,
-  formatInvoiceDate,
-  getInvoiceStatusBadgeVariant,
-  getInvoiceStatusLabel,
-} from '@/lib/utils/format-invoice';
-import type { Invoice } from '@/types/invoice/invoice.types';
-
-function InvoiceListCard({ invoice, onPress }: { invoice: Invoice; onPress: () => void }) {
-  const { colors } = useThemeColors();
-  const clientName = invoice.client?.fullName ?? '—';
-
-  return (
-    <Pressable onPress={onPress}>
-      <Card style={styles.card}>
-        <CardContent>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardTitle}>
-              <ThemedText variant="title">{invoice.invoiceNumber}</ThemedText>
-              <ThemedText variant="caption" muted>
-                {clientName}
-              </ThemedText>
-            </View>
-            <Badge
-              label={getInvoiceStatusLabel(invoice.status)}
-              variant={getInvoiceStatusBadgeVariant(invoice.status)}
-            />
-          </View>
-          <View style={styles.cardFooter}>
-            <ThemedText variant="mono" style={{ color: colors.primary }}>
-              {formatCurrency(invoice.total, invoice.currency)}
-            </ThemedText>
-            <ThemedText variant="caption" muted>
-              {formatInvoiceDate(invoice.issueDate)}
-            </ThemedText>
-          </View>
-        </CardContent>
-      </Card>
-    </Pressable>
-  );
-}
 
 export default function InvoicesTabScreen() {
   const router = useRouter();
   const { colors } = useThemeColors();
-  const isAuthenticated = useIsApiAuthenticated();
-  const {
-    data,
-    isLoading,
-    isError,
-    refetch,
-    isRefetching,
-    fetchNextPage,
-    hasNextPage,
-  } = useInvoicesInfiniteQuery({}, isAuthenticated);
-
-  const invoices = useMemo(() => data?.pages.flatMap((page) => page.data) ?? [], [data]);
+  const screen = useInvoicesScreen();
 
   const openNewInvoice = () => router.push('/invoices/new');
 
-  const newInvoiceButton = isAuthenticated ? (
+  const newInvoiceButton = screen.isAuthenticated ? (
     <View style={styles.topAction}>
       <PrimaryButton label={copy.facturas.newInvoice} onPress={openNewInvoice} />
     </View>
@@ -91,55 +36,76 @@ export default function InvoicesTabScreen() {
       contentStyle={styles.screenContent}
     >
       {newInvoiceButton}
-      {!isAuthenticated ? (
+      {!screen.isAuthenticated ? (
         <Banner
           variant="warning"
           message={copy.facturas.connectPrompt}
           actionLabel={copy.facturas.goToSettings}
           onAction={() => router.push('/(tabs)/settings')}
         />
-      ) : isLoading ? (
+      ) : (
+        <InvoiceFilterBar
+          search={screen.search}
+          status={screen.status}
+          resultCount={screen.resultCount}
+          totalCount={screen.totalCount}
+          referenceHint={screen.referenceHint}
+          onSearchChange={screen.setSearch}
+          onStatusChange={screen.setStatus}
+        />
+      )}
+
+      {screen.showLocalMatchBanner && screen.localRegister ? (
+        <View style={styles.bannerWrap}>
+          <Banner
+            variant="info"
+            message={copy.facturas.search.localMatchBanner}
+            actionLabel={copy.facturas.detail.viewInPagos}
+            onAction={() => router.push('/(tabs)/feed')}
+          />
+        </View>
+      ) : null}
+
+      {!screen.isAuthenticated ? null : screen.isLoading ? (
         <View style={styles.loading}>
           <SkeletonCard />
           <SkeletonCard />
         </View>
-      ) : isError ? (
+      ) : screen.isError ? (
         <FeedbackEmptyState
           title={copy.facturas.listLoadError}
           description={copy.facturas.listLoadError}
           variant="error"
           action={
-            <PrimaryButton label={copy.clients.retry} onPress={() => void refetch()} />
+            <PrimaryButton label={copy.clients.retry} onPress={() => void screen.refetch()} />
           }
         />
-      ) : invoices.length === 0 ? (
-        <EmptyState
-          title={copy.facturas.emptyTitle}
-          description={copy.facturas.emptyDescription}
-        />
+      ) : screen.invoices.length === 0 ? (
+        <EmptyState title={screen.emptyTitle} description={screen.emptyDescription} />
       ) : (
         <FlashList
-          data={invoices}
+          data={screen.invoices}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={() => void refetch()}
+              refreshing={screen.isRefetching}
+              onRefresh={() => void screen.refetch()}
               tintColor={colors.primary}
             />
           }
           onEndReached={() => {
-            if (hasNextPage) void fetchNextPage();
+            if (screen.hasNextPage) void screen.fetchNextPage();
           }}
           renderItem={({ item }) => (
             <InvoiceListCard
               invoice={item}
+              searchQuery={screen.debouncedSearch}
               onPress={() => router.push(`/invoices/${item.id}`)}
             />
           )}
           ListFooterComponent={
-            hasNextPage ? (
+            screen.hasNextPage ? (
               <ActivityIndicator color={colors.primary} style={styles.footer} />
             ) : null
           }
@@ -155,6 +121,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
   },
+  bannerWrap: {
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
   loading: { gap: spacing.sm, paddingHorizontal: spacing.md },
   listContent: {
     paddingHorizontal: spacing.md,
@@ -162,18 +132,4 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   footer: { paddingVertical: spacing.md },
-  card: { marginBottom: spacing.sm },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  cardTitle: { flex: 1, gap: 2 },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
 });

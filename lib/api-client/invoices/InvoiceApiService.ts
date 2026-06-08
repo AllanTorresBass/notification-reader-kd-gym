@@ -1,4 +1,5 @@
 import { BaseApiClient } from '@/lib/api-client/base/BaseApiClient';
+import { normalizePaymentReference } from '@/types/invoice/invoice-search.types';
 import type { InvoiceCreateInput, InvoiceListParamsInput } from '@/types/invoice/invoice.schemas';
 import type { Invoice, PaginatedInvoicesResponse } from '@/types/invoice/invoice.types';
 
@@ -25,6 +26,13 @@ export class InvoiceApiService extends BaseApiClient {
       method: 'POST',
       body: JSON.stringify(input),
     });
+  }
+
+  async getByPaymentReference(reference: string): Promise<Invoice> {
+    const normalized = normalizePaymentReference(reference);
+    return this.request<Invoice>(
+      `/api/v1/invoices/by-payment-reference?reference=${encodeURIComponent(normalized)}`
+    );
   }
 }
 

@@ -43,6 +43,8 @@ export const queryKeys = {
     list: (params: Omit<InvoiceListParamsInput, 'page'> = {}) =>
       [...queryKeys.invoices.lists(), params] as const,
     detail: (id: string) => [...queryKeys.invoices.all, 'detail', id] as const,
+    byReference: (reference: string) =>
+      [...queryKeys.invoices.all, 'by-reference', reference] as const,
   },
   services: {
     all: ['services'] as const,
