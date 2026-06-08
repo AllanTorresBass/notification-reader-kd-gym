@@ -1,6 +1,5 @@
 import { activityLogApiService } from '@/lib/api-client/activity-log/ActivityLogApiService';
 import { ApiError } from '@/lib/api-client/base/BaseApiClient';
-import { reportServiceError } from '@/lib/feedback/report-service-error';
 import { logger } from '@/lib/logger';
 import { localEntryToCreateRequest } from '@/types/feedback/activity-log-api.types';
 import { useActivityLogStore, type StoredActivityLogEntry } from '@/stores/activity-log-store';
@@ -18,6 +17,10 @@ function isActivityLogApiUnavailable(error: unknown): boolean {
   return error.status === 404 || error.status === 501 || error.status === 405;
 }
 
+function isActivityLogValidationError(error: unknown): boolean {
+  return error instanceof ApiError && error.code === 'validation';
+}
+
 function reportUploadFailureIfNeeded(error: unknown): void {
   consecutiveUploadFailures += 1;
   if (consecutiveUploadFailures < MAX_CONSECUTIVE_FAILURES_BEFORE_REPORT) {
@@ -25,12 +28,14 @@ function reportUploadFailureIfNeeded(error: unknown): void {
   }
 
   consecutiveUploadFailures = 0;
-  reportServiceError(
-    'activity_log_sync',
-    error,
-    'No se pudo subir el historial de actividad a kd-gym.',
-    { source: 'ActivityLogSyncService.flushPending', sync: false, toast: false }
-  );
+  void import('@/lib/feedback/report-service-error').then(({ reportServiceError }) => {
+    reportServiceError(
+      'activity_log_sync',
+      error,
+      'No se pudo subir el historial de actividad a kd-gym.',
+      { source: 'ActivityLogSyncService.flushPending', sync: false, toast: false }
+    );
+  });
 }
 
 export class ActivityLogSyncService {
@@ -79,6 +84,16 @@ export class ActivityLogSyncService {
             logger.info('Activity log API not available on server — keeping local only');
             await activityLogSyncQueue.clear();
             break;
+          }
+          if (isActivityLogValidationError(error)) {
+            await activityLogSyncQueue.dequeue(clientEventId);
+            failed += 1;
+            logger.info('Activity log entry rejected by server validation — kept local only', {
+              clientEventId,
+              kind: entry.outcome.kind,
+              status: entry.outcome.status,
+            });
+            continue;
           }
           failed += 1;
           reportUploadFailureIfNeeded(error);

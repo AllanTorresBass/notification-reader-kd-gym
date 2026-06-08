@@ -54,18 +54,45 @@ export function remoteToActivityLogEntry(remote: RemoteActivityLogEntry): {
   };
 }
 
+const MAX_CLIENT_EVENT_ID = 64;
+const MAX_TITLE = 200;
+const MAX_MESSAGE = 2000;
+
+function sanitizeMeta(
+  meta?: Record<string, string | number | boolean>
+): Record<string, string | number | boolean> | undefined {
+  if (!meta) return undefined;
+
+  const sanitized: Record<string, string | number | boolean> = {};
+  for (const [key, value] of Object.entries(meta)) {
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      sanitized[key] = value;
+    }
+  }
+
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+}
+
 export function localEntryToCreateRequest(entry: {
   id: string;
   timestamp: number;
   outcome: OperationOutcome;
 }): CreateActivityLogRequest {
-  return {
-    clientEventId: entry.id,
+  const title = entry.outcome.title.trim().slice(0, MAX_TITLE);
+  const message = entry.outcome.message.trim().slice(0, MAX_MESSAGE);
+  const request: CreateActivityLogRequest = {
+    clientEventId: entry.id.slice(0, MAX_CLIENT_EVENT_ID),
     kind: entry.outcome.kind,
     status: entry.outcome.status,
-    title: entry.outcome.title,
-    message: entry.outcome.message,
-    meta: entry.outcome.meta,
+    title: title || 'Actividad',
+    message: message || title || 'Sin detalle',
     occurredAt: new Date(entry.timestamp).toISOString(),
   };
+
+  const meta = sanitizeMeta(entry.outcome.meta);
+  if (meta) {
+    request.meta = meta;
+  }
+
+  return request;
 }
